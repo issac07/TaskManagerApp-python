@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Task Manager</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .task { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+<h1>Task Manager</h1>
+
+<form id="task-form">
+    <input type="text" id="title" placeholder="Title" required><br><br>
+    <input type="text" id="description" placeholder="Description" required><br><br>
+    <button type="submit">Add Task</button>
+</form>
+<br>
+<div id="ShowButton" style="display:none">
+    <button type="button" onclick="loadTasks()"> Show Tasks</button>
+</div>
+<hr>
+<div id="task-list"></div>
+
+<script>
+    async function loadTasks() {
+        const res = await fetch('/api/tasks');
+        const tasks = await res.json();
+        const list = document.getElementById('task-list');
+        list.innerHTML = '';
+        for (const id in tasks) {
+            const task = tasks[id];
+            list.innerHTML += `
+                <div class="task">
+                    <b>${task.title}</b> — ${task.description}
+                    [${task.completed ? ' Completed ' : ' Pending '}]
+                    <button onclick="editTask('${id}')">Edit</button>
+                    <button onclick="deleteTask('${id}')">Delete</button>
+                </div>
+            `;
+        }
+    }
+
+    document.getElementById('task-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        document.getElementById('ShowButton').style.display = "block";
+        const title = document.getElementById('title').value;
+        const description = document.getElementById('description').value;
+
+        await fetch('/api/tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, description })
+        });
+
+        document.getElementById('title').value = '';
+        document.getElementById('description').value = '';
+    });
+
+    async function deleteTask(id) {
+        await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+        loadTasks();
+    }
+
+    async function editTask(id) {
+        const newTitle = prompt("New title:");
+        const newDesc = prompt("New description:");
+        const completed = confirm("Mark as completed?");
+        await fetch(`/api/tasks/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: newTitle, description: newDesc, completed })
+        });
+        loadTasks();
+    }
+
+    loadTasks();
+</script>
+</body>
+</html>
